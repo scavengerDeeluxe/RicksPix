@@ -2,6 +2,7 @@
 """Publish Rick's Pix JSONL catalog to Cloudflare R2 + D1.
 
 By default this is a read-only dry run. Use --publish to upload/upsert.
+Requires publication-decisions.jsonl approval; unclassified photos are held.
 Source originals are NEVER opened or modified; only pre-generated previews
 and JSONL metadata are read. Requires: pip install -r tools/requirements.txt
 """
@@ -107,6 +108,40 @@ def d1_query(session, endpoint, sql, params):
         raise RuntimeError(f"D1 rejected query: {result.get('errors') or result.get('result')}")
     return result
 
+def load_decisions(path):
+    decisions = {}
+    if path.is_file():
+        with path.open(encoding="utf-8-sig") as stream:
+            for line in stream:
+                try:
+                    value = json.loads(line)
+                    if value.get("id"):
+                        decisions[str(value["id"])] = value
+                except (ValueError, TypeError):
+                    continue
+    return decisions
+
+def is_publicly_approved(decision):
+    if not decision:
+        return False
+    kind = decision.get("decision")
+    if kind == "rick_approved":
+        return decision.get("source") == "human"
+    if decision.get("source") != "local_ai":
+        return False
+    if kind not in {"public", "documentary"}:
+        return False
+    if decision.get("private_context") is not False:
+        return False
+    if decision.get("possible_rick_portrait"):
+        return False
+    if kind == "public" and decision.get("contains_people") is not False:
+        return False
+    try:
+        return float(decision.get("confidence", 0)) >= 0.85
+    except (ValueError, TypeError):
+        return False
+
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--catalog", default=str(Path(os.environ.get("LOCALAPPDATA", ".")) / "RicksPicksCatalog" / "catalog.jsonl"))
@@ -116,6 +151,8 @@ def main():
     parser.add_argument("--max-errors", type=int, default=10, help="Stop after this many errors (default 10)")
     args = parser.parse_args()
     catalog = Path(args.catalog)
+    decisions = load_decisions(catalog.parent / "publication-decisions.jsonl")
+    decisions.update(load_decisions(catalog.parent / "publication-overrides.jsonl"))
     if not catalog.is_file():
         parser.error(f"Catalog not found: {catalog}")
     if not args.publish:
@@ -135,12 +172,15 @@ def main():
         session.headers.update({"Authorization": f"Bearer {api_token}"})
         endpoint = f"https://api.cloudflare.com/client/v4/accounts/{account}/d1/database/{DATABASE_ID}/query"
 
-    successes = skipped = failed = 0
+    successes = skipped = failed = held = 0
     with catalog.open("r", encoding="utf-8-sig") as f:
         for line_num, line in enumerate(f, 1):
             try:
                 record = json.loads(line)
                 photo_id = str(record["id"])
+                if not is_publicly_approved(decisions.get(photo_id)):
+                    held += 1
+                    continue
                 if state and state.execute("SELECT 1 FROM completed WHERE id=?", (photo_id,)).fetchone():
                     skipped += 1
                     continue
@@ -166,7 +206,7 @@ def main():
                     break
     if state:
         state.close()
-    print(f"Finished: {successes} successful, {skipped} previously published, {failed} failed")
+    print(f"Finished: {successes} successful, {skipped} previously published, {held} held for review, {failed} failed")
     return 1 if failed else 0
 
 if __name__ == "__main__":
