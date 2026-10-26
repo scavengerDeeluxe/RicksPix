@@ -113,6 +113,7 @@ def main():
     parser.add_argument("--state", default=None, help="Local checkpoint SQLite; defaults next to catalog")
     parser.add_argument("--limit", type=int, default=0, help="Limit new successful photos (0=all)")
     parser.add_argument("--publish", action="store_true", help="Actually upload to R2 and write D1")
+    parser.add_argument("--max-errors", type=int, default=10, help="Stop after this many errors (default 10)")
     args = parser.parse_args()
     catalog = Path(args.catalog)
     if not catalog.is_file():
@@ -160,6 +161,9 @@ def main():
             except Exception as exc:
                 failed += 1
                 print(f"FAILED line {line_num}: {exc}", file=sys.stderr)
+                if failed >= args.max_errors:
+                    print("Stopping after error threshold.", file=sys.stderr)
+                    break
     if state:
         state.close()
     print(f"Finished: {successes} successful, {skipped} previously published, {failed} failed")
