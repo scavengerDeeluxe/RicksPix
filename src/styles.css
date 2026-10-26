@@ -15,3 +15,17 @@
 .lightbox{position:fixed;inset:0;background:rgba(9,14,12,.96);z-index:10;display:flex;align-items:center;justify-content:center;padding:45px 18px}.close{position:absolute;right:25px;top:14px;background:none;border:0;color:white;font-size:38px}.viewer{max-width:min(1100px,96vw);max-height:92vh;overflow:auto;color:white}.viewer>img{display:block;max-height:70vh;max-width:100%;margin:auto;object-fit:contain}.viewer-caption{display:flex;justify-content:space-between;gap:22px;margin-top:18px}.viewer-caption h3{font:400 27px 'Playfair Display',serif}.viewer-caption p{color:#dadfd8;margin:8px 0}.viewer-caption small{color:#9da89c}
 @media(max-width:760px){.topbar{height:68px}.topbar nav{gap:13px}.hero{min-height:540px;padding-top:82px}.hero-foot{margin-top:60px}.section-top{align-items:start;flex-direction:column}.photo-grid{grid-template-columns:repeat(2,minmax(0,1fr));gap:15px}.collection{padding-top:62px}.story{padding-block:70px}footer{flex-wrap:wrap}}
 @media(max-width:470px){.photo-grid{grid-template-columns:1fr}.hero-foot span:last-child{display:none}}
+
+
+.archive-disclaimer{padding:0 clamp(22px,5vw,94px) 27px;background:#f8f7f1;color:#92998f;font-size:10px;line-height:1.6;letter-spacing:.01em;text-align:center;max-width:100%}
+.viewer-actions{display:flex;flex-direction:column;gap:9px;align-items:flex-end}
+.report-link{background:transparent;border:0;padding:3px;color:#aebbb0;text-decoration:underline;text-underline-offset:3px;font-size:11px;cursor:pointer}
+.report-link:hover{color:#fff}
+.report-panel{border:1px solid #566259;background:#1f2924;padding:17px;margin-top:16px;border-radius:4px}
+.report-heading{font:400 19px 'Playfair Display',serif;color:#fff}
+.report-panel p{font-size:12px;color:#b9c4bc;margin:8px 0 13px}
+.report-options{display:flex;flex-wrap:wrap;gap:8px}
+.report-options button{border:1px solid #66796d;color:#e5eae5;background:transparent;padding:8px 10px;font-size:11px}
+.report-options button:hover{background:#394c40}
+.report-options button:disabled{opacity:.5}
+.report-feedback{color:#c0d6be;font-size:12px;margin-top:13px}
