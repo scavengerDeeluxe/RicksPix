@@ -13,3 +13,4 @@ jobs:
           node-version: '22'
       - run: npm install
       - run: npm run build
+      - run: python -m py_compile tools/process_and_publish.py tools/classify_publication.py tools/publish_catalog.py
