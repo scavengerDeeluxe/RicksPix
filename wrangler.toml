@@ -5,7 +5,7 @@ pages_build_output_dir = "dist/rickspix/browser"
 [[d1_databases]]
 binding = "DB"
 database_name = "rickspix-catalog"
-database_id = "REPLACE_WITH_D1_DATABASE_ID"
+database_id = "f0c828b2-983e-4bc3-b62d-c60f888e9175"
 
 [vars]
 IMAGE_BASE_URL = "https://images.rickspix.com"
