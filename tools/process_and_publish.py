@@ -26,7 +26,7 @@ REQUIRED = (
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     catalog_default = Path(os.environ.get("LOCALAPPDATA", ".")) / "RicksPicksCatalog" / "catalog.jsonl"
-    parser.add_argument("--catalog", default=str(catalog_default),
+    parser.add_argument("--source", default=r"G:\\My Drive\\RicksPicks\\ss\\2017",\n                        help="Photo source directory, searched recursively")\n    parser.add_argument("--ingest-limit", type=int, default=0,\n                        help="New photographs to add to catalog (0 = all)")\n    parser.add_argument("--catalog", default=str(catalog_default),
                         help="Path to the original AI catalog.jsonl")
     parser.add_argument("--classify-limit", type=int, default=0,
                         help="New photos to classify in this run (0 = all)")
@@ -53,7 +53,7 @@ def main():
                     return 2
                 env[name] = value.strip()
 
-    classification = [
+    ingestion = [\n        sys.executable, str(HERE / "catalog_new_photos.py"),\n        "--source", str(Path(args.source).expanduser()),\n        "--catalog", str(catalog),\n        "--limit", str(args.ingest_limit),\n    ]\n    classification = [
         sys.executable, str(HERE / "classify_publication.py"),
         "--catalog", str(catalog),
         "--output", str(catalog.parent / "publication-decisions.jsonl"),
