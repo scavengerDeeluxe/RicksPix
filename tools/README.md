@@ -4,10 +4,10 @@ From PowerShell in the RicksPix repository folder:
 
 ```powershell
 git pull
-python .\tools\process_and_publish.py
+python ./tools\process_and_publish.py
 ```
 
-By default the script recursively scans `G:\My Drive\RicksPicks\ss\2017`. To scan the entire `ss` collection, specify `--source "G:\My Drive\RicksPicks\ss"`.
+By default the script recursively scans `G:/My Drive/RicksPicks/ss/2017`. To scan the entire `ss` collection, specify `--source "G:/My Drive/RicksPicks/ss"`.
 
 For each **new** source photograph:
 
@@ -41,7 +41,7 @@ For a **known Rick** photograph, append the following to `publication-overrides.
 A local preview of changes without Cloudflare uploads:
 
 ```powershell
-python .\tools\process_and_publish.py --ingest-limit 10 --dry-run
+python ./tools\process_and_publish.py --ingest-limit 10 --dry-run
 ```
 
 The scripts never modify original photos. Only reduced-size gallery JPEGs are uploaded.
