@@ -96,7 +96,12 @@ def d1_query(session, endpoint, sql, params):
     response = session.post(endpoint, json={"sql": sql, "params": [
         "" if p is None else str(p) for p in params
     ]}, timeout=40)
-    response.raise_for_status()
+    if not response.ok:
+        try:
+            details = response.json()
+        except ValueError:
+            details = response.text[:2000]
+        raise RuntimeError(f"D1 HTTP {response.status_code}: {details}")
     result = response.json()
     if not result.get("success") or any(not item.get("success", False) for item in result.get("result", [])):
         raise RuntimeError(f"D1 rejected query: {result.get('errors') or result.get('result')}")
