@@ -94,7 +94,7 @@ def main():
                 private = answer.get("private_context") is not False
                 people = answer.get("contains_people") is not False
                 # Conservative gate: no low-confidence or private-context auto-public decisions.
-                if private or confidence < 0.85 or (people and decision == "public"):
+                if private or confidence < 0.85 or (people and decision == "public") or answer.get("possible_rick_portrait"):
                     decision = "review"
                 result = {
                     "id": pid, "decision": decision, "confidence": confidence,
