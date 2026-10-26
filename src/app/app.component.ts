@@ -51,11 +51,23 @@ interface PhotoResult { photos: Photo[]; total: number; }
       <span class="story-note">IN MEMORY OF RICK · PHOTOGRAPHS 2001—2018</span></section>
     </main>
     <footer><div class="brand">RICK'S PIX</div><span>Made to be explored, shared, and remembered.</span><span>© {{year}}</span></footer>
+    <div class="archive-disclaimer">This archive is being cataloged with AI assistance, and not every photograph has been individually reviewed. If an image seems out of place, please use “Flag for review” in the photo viewer.</div>
     <div class="lightbox" *ngIf="selected() as p" role="dialog" aria-modal="true" [attr.aria-label]="p.title" (click)="close()">
       <button class="close" (click)="close(); $event.stopPropagation()" aria-label="Close">×</button>
       <div class="viewer" (click)="$event.stopPropagation()"><img [src]="p.image_url" [alt]="p.description">
         <div class="viewer-caption"><div><h3>{{p.title}}</h3><p>{{p.description}}</p><small>{{p.camera_model || 'Camera unknown'}} · {{p.season || 'Season unknown'}}</small></div>
-          <button class="like" (click)="like(p)">♡ {{p.likes}}</button></div>
+          <div class="viewer-actions"><button class="like" (click)="like(p)">♡ {{p.likes}}</button>
+            <button class="report-link" (click)="reportOpen.set(!reportOpen())">Flag for review</button></div></div>
+        <div class="report-panel" *ngIf="reportOpen()">
+          <div class="report-heading">Help us curate the archive</div>
+          <p>What seems out of place about this photograph?</p>
+          <div class="report-options">
+            <button [disabled]="reportBusy()" (click)="report(p,'family')">Family / personal photo</button>
+            <button [disabled]="reportBusy()" (click)="report(p,'sensitive')">Sensitive or inappropriate</button>
+            <button [disabled]="reportBusy()" (click)="report(p,'other')">Something else</button>
+          </div>
+        </div>
+        <p class="report-feedback" role="status" *ngIf="reportMessage()">{{reportMessage()}}</p>
       </div>
     </div>
   `,
@@ -67,6 +79,9 @@ export class AppComponent implements OnInit {
   readonly loading = signal(false);
   readonly category = signal('All');
   readonly selected = signal<Photo | null>(null);
+  readonly reportOpen = signal(false);
+  readonly reportBusy = signal(false);
+  readonly reportMessage = signal('');
   readonly categories = computed(() => ['All', ...new Set(this.photos().map(p => p.category).filter(Boolean))]);
   readonly year = new Date().getFullYear();
   ngOnInit(): void { this.fetch(false); }
@@ -81,8 +96,17 @@ export class AppComponent implements OnInit {
       error: () => { if (!append) this.photos.set([]); this.loading.set(false); }
     });
   }
-  open(photo: Photo): void { this.selected.set(photo); document.body.style.overflow = 'hidden'; }
+  open(photo: Photo): void { this.selected.set(photo); this.reportOpen.set(false); this.reportMessage.set(''); document.body.style.overflow = 'hidden'; }
   close(): void { this.selected.set(null); document.body.style.overflow = ''; }
+  report(photo: Photo, reason: 'family' | 'sensitive' | 'other'): void {
+    let visitor = localStorage.getItem('rickspix-visitor');
+    if (!visitor) { visitor = crypto.randomUUID(); localStorage.setItem('rickspix-visitor', visitor); }
+    this.reportBusy.set(true);
+    this.http.post<{ok:boolean;message:string}>('/api/photos/' + encodeURIComponent(photo.id) + '/report', {visitor,reason}).subscribe({
+      next: result => { this.reportBusy.set(false); this.reportOpen.set(false); this.reportMessage.set(result.message || 'Thank you for helping us curate the collection.'); },
+      error: () => { this.reportBusy.set(false); this.reportMessage.set('Sorry, the report could not be sent. Please try again.'); }
+    });
+  }
   like(photo: Photo): void {
     let visitor = localStorage.getItem('rickspix-visitor');
     if (!visitor) { visitor = crypto.randomUUID(); localStorage.setItem('rickspix-visitor', visitor); }
