@@ -1,3 +1,23 @@
+# One-command processing
+
+From the repository root, after `pip install -r tools/requirements.txt`:
+
+```powershell
+python tools/process_and_publish.py
+```
+
+The command prompts for missing Cloudflare credentials, runs local Ollama classification on all remaining records, and publishes only eligible public/documentary photographs. It resumes both stages safely on subsequent runs. It does **not** create the original descriptive catalog; it consumes the existing `catalog.jsonl` and previews.
+
+To test without publishing:
+
+```powershell
+python tools/process_and_publish.py --classify-limit 25 --dry-run
+```
+
+Note: You must still run the original photo cataloger on newly recovered directories before they can enter this pipeline.
+
+---
+
 # Privacy gate before bulk publication
 
 Run this second-pass local classifier after the AI catalog exists:
