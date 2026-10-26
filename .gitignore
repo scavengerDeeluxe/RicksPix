@@ -1,0 +1,9 @@
+node_modules/
+dist/
+.angular/
+.wrangler/
+.env
+.dev.vars
+*.log
+catalog.jsonl
+previews/
