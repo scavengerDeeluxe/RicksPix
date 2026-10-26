@@ -24,7 +24,7 @@ SQL = """
 INSERT INTO photos
 (id,source_path,title,description,category,subcategory,captured_at,season,
  camera_make,camera_model,image_key,thumb_key,quality_score,ai_metadata,exif_metadata,published)
-VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,1)
+VALUES (?,?,?,?,?,?,?,?,?,?,?,?,NULLIF(?, ''),?,?,1)
 ON CONFLICT(id) DO UPDATE SET
  title=excluded.title,description=excluded.description,category=excluded.category,
  subcategory=excluded.subcategory,captured_at=excluded.captured_at,
