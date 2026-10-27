@@ -13,6 +13,8 @@ import os
 from pathlib import Path
 import sqlite3
 import sys
+import time
+from datetime import datetime, timezone
 from io import BytesIO
 
 import boto3
@@ -94,19 +96,30 @@ def thumbnail(path):
         return out.getvalue()
 
 def d1_query(session, endpoint, sql, params):
-    response = session.post(endpoint, json={"sql": sql, "params": [
-        "" if p is None else str(p) for p in params
-    ]}, timeout=40)
-    if not response.ok:
+    payload = {"sql": sql, "params": ["" if p is None else str(p) for p in params]}
+    for attempt in range(1, 6):
         try:
-            details = response.json()
-        except ValueError:
-            details = response.text[:2000]
-        raise RuntimeError(f"D1 HTTP {response.status_code}: {details}")
-    result = response.json()
-    if not result.get("success") or any(not item.get("success", False) for item in result.get("result", [])):
-        raise RuntimeError(f"D1 rejected query: {result.get('errors') or result.get('result')}")
-    return result
+            response = session.post(endpoint, json=payload, timeout=60)
+            if response.status_code in (429, 500, 502, 503, 504) and attempt < 5:
+                delay = min(90, 5 * (2 ** (attempt - 1)))
+                print(f"D1 temporary HTTP {response.status_code}; retrying in {delay}s", flush=True)
+                time.sleep(delay)
+                continue
+            if not response.ok:
+                try:
+                    details = response.json()
+                except ValueError:
+                    details = response.text[:2000]
+                raise RuntimeError(f"D1 HTTP {response.status_code}: {details}")
+            result = response.json()
+            if not result.get("success") or any(not item.get("success", False) for item in result.get("result", [])):
+                raise RuntimeError(f"D1 rejected query: {result.get('errors') or result.get('result')}")
+            return result
+        except requests.RequestException:
+            if attempt >= 5:
+                raise
+            time.sleep(min(90, 5 * (2 ** (attempt - 1))))
+    raise RuntimeError("D1 request retries exhausted")
 
 def load_decisions(path):
     decisions = {}
@@ -148,7 +161,7 @@ def main():
     parser.add_argument("--state", default=None, help="Local checkpoint SQLite; defaults next to catalog")
     parser.add_argument("--limit", type=int, default=0, help="Limit new successful photos (0=all)")
     parser.add_argument("--publish", action="store_true", help="Actually upload to R2 and write D1")
-    parser.add_argument("--max-errors", type=int, default=10, help="Stop after this many errors (default 10)")
+    parser.add_argument("--max-errors", type=int, default=0, help="Optional error limit (0 = do not stop for individual files)")
     args = parser.parse_args()
     catalog = Path(args.catalog)
     decisions = load_decisions(catalog.parent / "publication-decisions.jsonl")
@@ -173,7 +186,8 @@ def main():
         endpoint = f"https://api.cloudflare.com/client/v4/accounts/{account}/d1/database/{DATABASE_ID}/query"
 
     successes = skipped = failed = held = 0
-    with catalog.open("r", encoding="utf-8-sig") as f:
+    failure_path = catalog.parent / "processing-errors.jsonl"
+    with catalog.open("r", encoding="utf-8-sig") as f, failure_path.open("a", encoding="utf-8") as errors:
         for line_num, line in enumerate(f, 1):
             try:
                 record = json.loads(line)
@@ -200,14 +214,18 @@ def main():
                     break
             except Exception as exc:
                 failed += 1
-                print(f"FAILED line {line_num}: {exc}", file=sys.stderr)
-                if failed >= args.max_errors:
-                    print("Stopping after error threshold.", file=sys.stderr)
+                error = {"time": datetime.now(timezone.utc).isoformat(), "stage": "publish",
+                         "line": line_num, "error_type": type(exc).__name__, "error": str(exc)}
+                errors.write(json.dumps(error, ensure_ascii=False) + "\n")
+                errors.flush()
+                print(f"SKIPPED publish line {line_num}: {exc}", file=sys.stderr, flush=True)
+                if args.max_errors and failed >= args.max_errors:
+                    print("Configured error limit reached.", file=sys.stderr)
                     break
     if state:
         state.close()
-    print(f"Finished: {successes} successful, {skipped} previously published, {held} held for review, {failed} failed")
-    return 1 if failed else 0
+    print(f"Finished: {successes} successful, {skipped} previously published, {held} held, {failed} errors logged ({failure_path})")
+    return 1 if (args.max_errors and failed >= args.max_errors) else 0
 
 if __name__ == "__main__":
     raise SystemExit(main())
