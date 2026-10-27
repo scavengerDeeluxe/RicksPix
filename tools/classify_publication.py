@@ -12,6 +12,8 @@ import os
 from pathlib import Path
 import sys
 import requests
+import time
+from datetime import datetime, timezone
 
 PROMPT = """You are reviewing one photograph for a PUBLIC historical photography archive.
 The collection contains landscapes, wildlife, documentary scenes, and private family life.
@@ -65,7 +67,8 @@ def main():
             except ValueError:
                 pass
     processed = held = failures = 0
-    with catalog.open(encoding="utf-8-sig") as source, output.open("a", encoding="utf-8") as dest:
+    failure_path = catalog.parent / "processing-errors.jsonl"
+    with catalog.open(encoding="utf-8-sig") as source, output.open("a", encoding="utf-8") as dest, failure_path.open("a", encoding="utf-8") as errors:
         for n, line in enumerate(source, 1):
             try:
                 item = json.loads(line)
@@ -81,9 +84,20 @@ def main():
                     "options": {"temperature": 0.0, "num_ctx": 8192},
                     "messages": [{"role": "user", "content": PROMPT, "images": [image]}]
                 }
-                resp = requests.post("http://127.0.0.1:11434/api/chat", json=payload, timeout=300)
-                resp.raise_for_status()
-                answer = json.loads(resp.json()["message"]["content"])
+                last_error = None
+                for attempt in range(1, 5):
+                    try:
+                        resp = requests.post("http://127.0.0.1:11434/api/chat", json=payload, timeout=360)
+                        resp.raise_for_status()
+                        answer = json.loads(resp.json()["message"]["content"])
+                        last_error = None
+                        break
+                    except (requests.RequestException, ValueError, KeyError) as exc:
+                        last_error = exc
+                        if attempt < 4:
+                            time.sleep(min(60, 5 * 2 ** (attempt - 1)))
+                if last_error is not None:
+                    raise RuntimeError(f"Ollama failed after retries: {last_error}")
                 decision = str(answer.get("decision", "review")).lower().strip()
                 if decision not in VALID:
                     decision = "review"
@@ -114,11 +128,14 @@ def main():
                     break
             except Exception as exc:
                 failures += 1
-                print(f"FAILED line {n}: {exc}", file=sys.stderr)
-                if failures >= 10:
-                    break
-    print(f"Classified: {processed}, held for privacy/review: {held}, failures: {failures}")
-    return 1 if failures else 0
+                error = {"time": datetime.now(timezone.utc).isoformat(), "stage": "legacy_classify",
+                         "line": n, "error_type": type(exc).__name__, "error": str(exc)}
+                errors.write(json.dumps(error, ensure_ascii=False) + "\n")
+                errors.flush()
+                print(f"SKIPPED legacy line {n}: {exc}", file=sys.stderr, flush=True)
+                continue
+    print(f"Classified: {processed}, held: {held}, errors logged: {failures} ({failure_path})")
+    return 0
 
 if __name__ == "__main__":
     raise SystemExit(main())
