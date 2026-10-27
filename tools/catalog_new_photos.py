@@ -155,6 +155,15 @@ def normalize_analysis(raw, model):
         "reason": str(publication.get("reason") or "")[:500],
         "source": "local_ai", "model": model
     }
+    category = str(raw.get("primary_category") or "Other")[:80]
+    evidence = " ".join(str(raw.get(field) or "") for field in
+                        ("title", "description", "subcategory")).casefold()
+    if any(term in evidence for term in ("dachshund", "doxie", "wiener dog", "sausage dog")):
+        category = "Dachshunds"
+    elif category.casefold() == "wildlife" and any(
+        term in evidence for term in ("pet dog", "domestic dog", "house cat", "pet cat")
+    ):
+        category = "Pets"
     analysis = {
         "title": str(raw.get("title") or "")[:180],
         "description": str(raw.get("description") or "")[:1400],
