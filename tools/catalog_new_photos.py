@@ -26,7 +26,7 @@ AND suitability for the public exhibition. Return exactly one JSON object with:
 {
  "title": "Brief evocative but factual title",
  "description": "1-3 sentences describing what is visibly happening",
- "primary_category": "Landscape | Wildlife | Nature | People | Documentary | Architecture | Objects | Other",
+ "primary_category": "Landscape | Wildlife | Dachshunds | Pets | Nature | People | Documentary | Architecture | Objects | Other",
  "subcategory": "Short specific subject",
  "season": "Winter | Spring | Summer | Fall | Unknown",
  "quality": {"overall": 1, "sharpness": 1, "exposure": 1, "composition": 1,
@@ -36,6 +36,14 @@ AND suitability for the public exhibition. Return exactly one JSON object with:
                  "private_context": false, "possible_rick_portrait": false,
                  "reason": "Brief explanation"}
 }
+Important category rules:
+- Wildlife is for WILD animals only: wolves, lynx, moose, foxes, deer, birds, etc.
+- Rick photographed many pet dachshunds. Any identifiable dachshund,
+  doxie, or wiener dog belongs in the separate Dachshunds category,
+  NEVER Wildlife. This includes dachshunds outdoors or in snow.
+- Other domestic dogs, cats, and pets belong in Pets, NOT Wildlife.
+- Categorization is independent of public suitability; do not suppress
+  a pet photo just because it features Rick's dogs.
 Quality scores must be integers from 1 to 10: 1 severely defective, 5 acceptable,
 10 exceptional. Consider blur, exposure, noise, composition; judge the photograph,
 NOT whether the subject is personally interesting.
@@ -144,7 +152,7 @@ def normalize_analysis(raw, model):
     analysis = {
         "title": str(raw.get("title") or "")[:180],
         "description": str(raw.get("description") or "")[:1400],
-        "primary_category": str(raw.get("primary_category") or "Other")[:80],
+        "primary_category": category,
         "subcategory": str(raw.get("subcategory") or "")[:100],
         "season": str(raw.get("season") or "Unknown")[:30],
         "quality": quality
