@@ -11,6 +11,7 @@ import os
 from pathlib import Path
 import subprocess
 import sys
+import ctypes
 
 HERE = Path(__file__).resolve().parent
 REQUIRED = (
@@ -19,6 +20,20 @@ REQUIRED = (
     ("R2_SECRET_ACCESS_KEY", "R2 Secret Access Key", True),
     ("CLOUDFLARE_D1_API_TOKEN", "Cloudflare D1 API token", True),
 )
+
+def keep_windows_awake(enable):
+    """Prevent idle sleep during this foreground job; restore on exit."""
+    if os.name != "nt":
+        return
+    ES_CONTINUOUS = 0x80000000
+    ES_SYSTEM_REQUIRED = 0x00000001
+    flags = ES_CONTINUOUS | (ES_SYSTEM_REQUIRED if enable else 0)
+    try:
+        result = ctypes.windll.kernel32.SetThreadExecutionState(flags)
+        if not result:
+            print("WARNING: Could not prevent Windows idle sleep", file=sys.stderr)
+    except Exception as exc:
+        print(f"WARNING: Sleep prevention unavailable: {exc}", file=sys.stderr)
 
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
@@ -69,6 +84,7 @@ def main():
     if not args.dry_run:
         publish.append("--publish")
 
+    keep_windows_awake(True)
     try:
         print("\n=== 1/3: Discover + catalog + decide suitability (one AI call/photo) ===", flush=True)
         subprocess.run(ingestion, env=env, check=True)
@@ -83,6 +99,7 @@ def main():
         print("Interrupted. Rerun to resume.", file=sys.stderr)
         return 130
     finally:
+        keep_windows_awake(False)
         for name, _, _ in REQUIRED:
             if name not in os.environ:
                 env.pop(name, None)
