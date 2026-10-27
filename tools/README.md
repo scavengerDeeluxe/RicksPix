@@ -27,6 +27,23 @@ For a **known Rick** photograph, append the following to `publication-overrides.
 {"id":"ACTUAL_CATALOG_ID","decision":"rick_approved","source":"human","reason":"Verified by family"}
 ```
 
+## Unattended, long-running scans
+
+The driver requests that Windows stay awake while it runs (it does not block
+manual restarts, forced Windows Update restarts, or power loss).
+
+- Metadata errors are nonfatal; ExifTool is read as UTF-8 bytes rather than
+  Windows CP1252, and bad EXIF is omitted without losing the photo.
+- A corrupt image is logged and skipped; the next file is processed.
+- Transient Ollama responses and D1 network/rate-limit errors are retried
+  with increasing delays.
+- Failed items from all stages append to
+  `%LOCALAPPDATA%/RicksPicksCatalog/processing-errors.jsonl`.
+- Resume with the same command after any interruption. Completed catalog IDs
+  and published records are skipped.
+- Systemic problems (missing source directory, bad credentials, disk full,
+  machine shutdown) can still stop the run; review the log afterwards.
+
 ## Requirements
 
 - Python 3 with `pip install -r tools/requirements.txt`.
