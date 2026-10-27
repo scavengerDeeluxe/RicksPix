@@ -23,7 +23,7 @@ REQUIRED = (
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     base = Path(os.environ.get("LOCALAPPDATA", ".")) / "RicksPicksCatalog"
-    parser.add_argument("--source", default="G:/My Drive/RicksPicks/ss/2017",
+    parser.add_argument("--source", default="G:/My Drive/RicksPicks/ss",
                         help="Photo source folder, recursively scanned")
     parser.add_argument("--catalog", default=str(base / "catalog.jsonl"))
     parser.add_argument("--ingest-limit", type=int, default=0,
