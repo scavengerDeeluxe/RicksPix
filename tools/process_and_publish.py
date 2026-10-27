@@ -65,6 +65,7 @@ def main():
         parser.error(f"Photo source folder not found: {source}")
 
     env = os.environ.copy()
+    env.setdefault("PYTHONIOENCODING", "utf-8:backslashreplace")
     if not args.dry_run:
         print("Cloudflare credentials are used only for this process and are not saved.")
         for name, label, secret in REQUIRED:
