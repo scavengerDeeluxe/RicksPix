@@ -36,6 +36,14 @@ def keep_windows_awake(enable):
         print(f"WARNING: Sleep prevention unavailable: {exc}", file=sys.stderr)
 
 def main():
+    # The Windows console code page may be cp1252. Never crash while printing
+    # a filename or AI caption containing Unicode characters.
+    for stream in (sys.stdout, sys.stderr):
+        if hasattr(stream, "reconfigure"):
+            try:
+                stream.reconfigure(errors="backslashreplace")
+            except (OSError, ValueError):
+                pass
     parser = argparse.ArgumentParser(description=__doc__)
     base = Path(os.environ.get("LOCALAPPDATA", ".")) / "RicksPicksCatalog"
     parser.add_argument("--source", default="G:/My Drive/RicksPicks/ss",
