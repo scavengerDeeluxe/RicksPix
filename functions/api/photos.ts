@@ -9,6 +9,12 @@ export const GALLERY_CATEGORY_SQL = `CASE
     OR LOWER(COALESCE(p.title, '') || ' ' || COALESCE(p.description, '') || ' ' || COALESCE(p.subcategory, '')) LIKE '%wiener dog%'
     OR LOWER(COALESCE(p.title, '') || ' ' || COALESCE(p.description, '') || ' ' || COALESCE(p.subcategory, '')) LIKE '%sausage dog%'
   ) THEN 'Dachshunds'
+  WHEN LOWER(COALESCE(p.category, '')) = 'wildlife' AND (
+    (' ' || LOWER(COALESCE(p.title, '') || ' ' || COALESCE(p.description, '') || ' ' || COALESCE(p.subcategory, '')) || ' ') LIKE '% dog %'
+    OR (' ' || LOWER(COALESCE(p.title, '') || ' ' || COALESCE(p.description, '') || ' ' || COALESCE(p.subcategory, '')) || ' ') LIKE '% dogs %'
+    OR LOWER(COALESCE(p.title, '') || ' ' || COALESCE(p.description, '') || ' ' || COALESCE(p.subcategory, '')) LIKE '%puppy%'
+    OR LOWER(COALESCE(p.title, '') || ' ' || COALESCE(p.description, '') || ' ' || COALESCE(p.subcategory, '')) LIKE '%puppies%'
+  ) THEN 'Pets'
   ELSE p.category
 END`;
 
