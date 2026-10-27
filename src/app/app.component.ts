@@ -1,4 +1,4 @@
-import { Component, OnInit, inject, signal, computed } from '@angular/core';
+import { Component, OnInit, inject, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { HttpClient } from '@angular/common/http';
 
@@ -10,6 +10,7 @@ interface Photo {
   likes: number; quality_score: number | null;
 }
 interface PhotoResult { photos: Photo[]; total: number; }
+interface CategoryResult { categories: { category: string; total: number }[]; }
 @Component({
   selector: 'app-root',
   standalone: true,
@@ -68,9 +69,14 @@ export class AppComponent implements OnInit {
   readonly loading = signal(false);
   readonly category = signal('All');
   readonly selected = signal<Photo | null>(null);
-  readonly categories = computed(() => ['All', ...new Set(this.photos().map(p => p.category).filter(Boolean))]);
+  readonly categories = signal<string[]>(['All']);
   readonly year = new Date().getFullYear();
-  ngOnInit(): void { this.fetch(false); }
+  ngOnInit(): void { this.loadCategories(); this.fetch(false); }
+  private loadCategories(): void {
+    this.http.get<CategoryResult>('/api/categories').subscribe({
+      next: result => this.categories.set(['All', ...result.categories.map(x => x.category)]),
+    });
+  }
   chooseCategory(cat: string): void { this.category.set(cat); this.fetch(false); }
   loadMore(): void { this.fetch(true); }
   private fetch(append: boolean): void {
